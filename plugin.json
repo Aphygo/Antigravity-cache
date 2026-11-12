@@ -1,0 +1,12 @@
+{
+  "name": "antigravity-cache",
+  "displayName": "Antigravity Cache (Zero-LLM Pointer & KV-Prefix Shield)",
+  "version": "1.0.0",
+  "description": "Zero-LLM structural AST/SQLite pointer cache and PreToolUse Auto-Guard that cuts file-read context bloat by 75-95% while preserving ~98% cloud KV-prefix cache hit rates.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Run antigravity-cache stats to measure pointer compression and cloud KV-prefix cache hits",
+    "Map the structural outline and call graph of a large source file before editing",
+    "Locate a symbol across the repository and inspect only its exact line-range slice"
+  ]
+}

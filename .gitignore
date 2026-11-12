@@ -1,0 +1,27 @@
+# Python / pytest
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# SQLite caches & temporary runtime artifacts
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.db
+cache/
+dist/
+build/
+.DS_Store
+Thumbs.db

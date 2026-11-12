@@ -1,0 +1,24 @@
+{
+  "antigravity-cache": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "read_file|view_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/kv_pointer_cache.py hook --event pre_tool",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python scripts/kv_pointer_cache.py hook --event pre_invocation",
+        "timeout": 10
+      }
+    ]
+  }
+}
