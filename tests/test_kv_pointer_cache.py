@@ -227,12 +227,20 @@ def test_map_small_file_inline_stats_and_installer(tmp_path: Path, capsys: pytes
     assert stats["structural_benchmark"]["map_vs_full"]["savings_pct"] > 75.0
 
     plugin_dest = tmp_path / "plugins" / "antigravity-cache"
-    res = installer.install_plugin(target_dir=plugin_dest, python_exe=sys.executable, dry_run=False)
+    res = installer.install_plugin(
+        target_dir=plugin_dest,
+        python_exe=sys.executable,
+        db_path=db_path,
+        dry_run=False,
+    )
     assert res["status"] == "installed"
     assert (plugin_dest / "plugin.json").exists()
     hooks_cfg = json.loads((plugin_dest / "hooks.json").read_text(encoding="utf-8"))
     cmd_str = hooks_cfg["antigravity-cache"]["PreToolUse"][0]["hooks"][0]["command"]
-    assert "kv_pointer_cache.py hook --event pre_tool" in cmd_str
+    assert "hook --event pre_tool" in cmd_str
+    assert "--db" in cmd_str and str(db_path) in cmd_str
+    skill_md = (plugin_dest / "skills" / "antigravity-cache" / "SKILL.md").read_text(encoding="utf-8")
+    assert f"--db {db_path.as_posix()}" in skill_md
 
     proc = subprocess.run(
         [sys.executable, str(plugin_dest / "scripts" / "kv_pointer_cache.py"), "stats", "--db", str(db_path), "--roots", str(REAL_CACHE_FILE), "--brain-dir", str(tmp_path / "nb")],

@@ -35,10 +35,13 @@ def _quote_cmd_path(path: Path) -> str:
     return raw
 
 
-def build_installed_hooks(python_exe: str, script_path: Path) -> dict[str, object]:
+def build_installed_hooks(
+    python_exe: str, script_path: Path, db_path: Path | None = None
+) -> dict[str, object]:
     """Generate an Antigravity `hooks.json` bound to an absolute Python executable and script."""
     py_quoted = _quote_cmd_path(Path(python_exe))
     sc_quoted = _quote_cmd_path(script_path)
+    db_flag = f" --db {_quote_cmd_path(db_path)}" if db_path is not None else ""
     return {
         "antigravity-cache": {
             "enabled": True,
@@ -48,7 +51,7 @@ def build_installed_hooks(python_exe: str, script_path: Path) -> dict[str, objec
                     "hooks": [
                         {
                             "type": "command",
-                            "command": f"{py_quoted} {sc_quoted} hook --event pre_tool",
+                            "command": f"{py_quoted} {sc_quoted}{db_flag} hook --event pre_tool",
                             "timeout": 10,
                         }
                     ],
@@ -57,7 +60,7 @@ def build_installed_hooks(python_exe: str, script_path: Path) -> dict[str, objec
             "PreInvocation": [
                 {
                     "type": "command",
-                    "command": f"{py_quoted} {sc_quoted} hook --event pre_invocation",
+                    "command": f"{py_quoted} {sc_quoted}{db_flag} hook --event pre_invocation",
                     "timeout": 10,
                 }
             ],
@@ -65,12 +68,15 @@ def build_installed_hooks(python_exe: str, script_path: Path) -> dict[str, objec
     }
 
 
-def _rewrite_doc_script_paths(text: str, python_exe: str, script_path: Path) -> str:
+def _rewrite_doc_script_paths(
+    text: str, python_exe: str, script_path: Path, db_path: Path | None = None
+) -> str:
     py_cmd = Path(python_exe).as_posix() if os.name != "nt" else str(python_exe)
     sc_cmd = script_path.as_posix()
+    db_flag = f" --db {db_path.as_posix()}" if db_path is not None else ""
     return text.replace(
         "python scripts/kv_pointer_cache.py",
-        f"{py_cmd} {sc_cmd}",
+        f"{py_cmd} {sc_cmd}{db_flag}",
     )
 
 
@@ -110,11 +116,12 @@ def install_plugin(
     *,
     target_dir: Path,
     python_exe: str,
+    db_path: Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, object]:
     """Install (or preview installing) the Antigravity Cache plugin bundle."""
     installed_script = target_dir / "scripts" / "kv_pointer_cache.py"
-    hooks_payload = build_installed_hooks(python_exe, installed_script)
+    hooks_payload = build_installed_hooks(python_exe, installed_script, db_path=db_path)
     hooks_text = json.dumps(hooks_payload, ensure_ascii=False, indent=2) + "\n"
 
     actions: list[str] = []
@@ -130,7 +137,10 @@ def install_plugin(
             dst.parent.mkdir(parents=True, exist_ok=True)
             if rel in ("rules/AGENTS.md", "skills/antigravity-cache/SKILL.md"):
                 raw = src.read_text(encoding="utf-8")
-                dst.write_text(_rewrite_doc_script_paths(raw, python_exe, installed_script), encoding="utf-8")
+                dst.write_text(
+                    _rewrite_doc_script_paths(raw, python_exe, installed_script, db_path=db_path),
+                    encoding="utf-8",
+                )
             else:
                 shutil.copy2(src, dst)
         (target_dir / "hooks.json").write_text(hooks_text, encoding="utf-8")
@@ -140,6 +150,7 @@ def install_plugin(
         "target_dir": str(target_dir),
         "python_executable": python_exe,
         "installed_script": str(installed_script),
+        "db_path": str(db_path) if db_path is not None else None,
         "actions": actions,
     }
 
@@ -171,6 +182,12 @@ def main(argv: list[str] | None = None) -> int:
         dest="python_exe",
         default=sys.executable,
         help=f"Python executable to bind into hooks.json (default: {sys.executable})",
+    )
+    parser.add_argument(
+        "--db-path",
+        type=Path,
+        default=None,
+        help="Optional explicit SQLite DB path to bind into hooks and docs.",
     )
     parser.add_argument("--check", action="store_true", help="Run environment & conflict checks.")
     parser.add_argument("--dry-run", action="store_true", help="Preview installation without writing files.")
@@ -214,7 +231,12 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
-    res = install_plugin(target_dir=args.target_dir, python_exe=args.python_exe, dry_run=args.dry_run)
+    res = install_plugin(
+        target_dir=args.target_dir,
+        python_exe=args.python_exe,
+        db_path=args.db_path,
+        dry_run=args.dry_run,
+    )
     if existing_hooks:
         res["existing_global_hooks"] = [str(p) for p in existing_hooks]
     print(json.dumps(res, ensure_ascii=False, indent=2))

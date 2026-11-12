@@ -25,13 +25,10 @@ from pathlib import Path
 from typing import Any
 
 def _resolve_default_db_path() -> Path:
-    """Resolve SQLite pointer store location across Windows/macOS/Linux and plugin runs."""
+    """Resolve SQLite pointer store location consistently across hooks and CLI calls."""
     env_db = os.environ.get("ANTIGRAVITY_CACHE_DB")
     if env_db:
         return Path(env_db)
-    plugin_data = os.environ.get("PLUGIN_DATA")
-    if plugin_data:
-        return Path(plugin_data) / "kv_pointer_cache.sqlite"
     local_dir = Path(__file__).resolve().parent
     if (local_dir / "inre_efterklang_hook.py").exists():
         return local_dir / "cache" / "kv_pointer_cache.sqlite"
